@@ -7,42 +7,84 @@
 <body>
   <%- include('./partials/nav') %>
 
-    <div class="container mt-4" >
-        <h1>
-            <%= blog.title %>
-        </h1>
-        <!-- Updated image src to match the static path structure -->
-        <img src="/uploads/<%= blog.coverImageURL.split('/').pop() %>" width="500px" height="500px"/>
-        <p class="mt-4"><%= blog.body %></p>
-    
-   </div>
-   <div class="container mt-4" >
-    <img src="<%= blog.createdBy.profileImageURL %>" width="50px"alt=""><%= blog.createdBy.fullName %>
-   </div>
-   <div class="container mt-3" >
+  <div class="container mt-4">
+    <h1><%= blog.title %></h1>
+    <img src="/uploads/<%= blog.coverImageURL.split('/').pop() %>" width="500px" height="500px"/>
+    <p class="mt-4"><%= blog.body %></p>
+  </div>
+
+  <div class="container mt-4">
+    <img src="<%= blog.createdBy.profileImageURL %>" width="50px" alt="">
+    <%= blog.createdBy.fullName %>
+  </div>
+
+  <!-- Add the Summary Feature -->
+  <div class="container mt-4">
+    <h2>Read Summary</h2>
+    <button id="generate-summary" class="btn btn-primary">Generate Summary</button>
+    <div id="summary-container" class="mt-3"></div>
+  </div>
+
+  <div class="container mt-3">
     <h1>Comments (<%= comments.length %>)</h1>
     <% if (locals.user) { %>
-        <form action="/blog/comments/<%= blog._id %>" method="post">
-            
-             
-            <div class="mb-3">
-               <input type="text" name="content" class="form-control" placeholder="Enter your comment">
-            <button class="btn btn-sm btn-primary" type="submit">Add</button>  
-            </div>
-    
-        </form>
-        
+      <form action="/blog/comments/<%= blog._id %>" method="post">
+        <div class="mb-3">
+          <input type="text" name="content" class="form-control" placeholder="Enter your comment">
+          <button class="btn btn-sm btn-primary" type="submit">Add</button>  
+        </div>
+      </form>
     <% } %>
     <div class="mb-3">
-        <% comments.forEach(comment => { %>
-         <div>
-            <img src="<%= comment.createdBy.profileImageURL %>" width="50px"alt=""><%= comment.createdBy.fullName %>
-            <pre><%= comment.content %></pre>
-         </div>
-        <% }) %>
+      <% comments.forEach(comment => { %>
+      <div>
+        <img src="<%= comment.createdBy.profileImageURL %>" width="50px" alt="">
+        <%= comment.createdBy.fullName %>
+        <pre><%= comment.content %></pre>
+      </div>
+      <% }) %>
     </div>
-   </div>
+  </div>
 
   <%- include('./partials/scripts') %>
+
+  <!-- Store blog body safely in a hidden div -->
+  <div id="blog-body" data-content="<%= blog.body.replace(/"/g, '&quot;').replace(/\n/g, ' ') %>"></div>
+
+  <!-- JavaScript for Summary Fetch -->
+  <script>
+    document.getElementById("generate-summary").addEventListener("click", async () => {
+      const blogElement = document.getElementById("blog-body");
+      const content = blogElement.getAttribute("data-content"); // Get blog content safely
+      const summaryContainer = document.getElementById("summary-container");
+
+      console.log("Blog Content:", content); // Debugging
+
+      if (!content) {
+        summaryContainer.innerHTML = `<p class="text-danger">No content available for summarization.</p>`;
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/summarize", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ content: encodeURIComponent(content) }),
+        });
+        console.log(response); // Debugging
+        if (response.ok) {
+          const data = await response.json();
+          summaryContainer.innerHTML = `<p>${data.summary}</p>`;
+        } else {
+          summaryContainer.innerHTML = `<p class="text-danger">Failed to generate summary.</p>`;
+        }
+      } catch (error) {
+        console.error("Error generating summary:", error);
+        summaryContainer.innerHTML = `<p class="text-danger">An error occurred. Please try again later.</p>`;
+      }
+    });
+  </script>
 </body>
 </html>
